@@ -1,15 +1,25 @@
 {
-  "name": "NASA Picture of the day viewer",
+  "name": "Tree Style Tabs for Edge",
   "version": "0.0.0.1",
   "manifest_version": 3,
-  "description": "A chromium extension to show NASA's Picture of the Day.",
+  "description": "Tab management made easy.",
   "icons": {
     "16": "icons/nasapod16x16.png",
     "32": "icons/nasapod32x32.png",
     "48": "icons/nasapod48x48.png",
     "128": "icons/nasapod128x128.png"
   },
-  "action": {
-    "default_popup": "popup/popup.html"
-  }
+  "background": {
+    "service_worker": "src/javascript/background.js"
+  },
+  "permissions": [
+    "tabs",
+    "activeTab",
+    "tabGroups",
+    "storage",
+    "scripting",
+    "unlimitedStorage"
+  ],
+  "optional_permissions": ["tabs"],
+  "host_permissions": ["http://*/*", "https://*/*"]
 }
