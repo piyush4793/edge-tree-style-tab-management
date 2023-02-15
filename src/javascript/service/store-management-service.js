@@ -14,7 +14,9 @@ class Tab {
     }
 
     // used to update the tab information only when there is a change
-    updateTab(tab = {}) {
+    updateTab(tab) {
+        if(!tab) return this;
+
         this.id = this.id || tab?.id;
         this.parentTabId = this.parentTabId || tab?.parentTabId;
         this.childTabIds = [...this.childTabIds, ...tab?.childTabIds];
@@ -23,7 +25,7 @@ class Tab {
 }
 
 // State management store for the tab tree
-stateManagementStore = {} 
+let stateManagementStore = {} 
 
 // Create a state management hash table and save it to local storage when the extension is installed
 export function createStateManagementStore(tabs) {
@@ -104,7 +106,7 @@ export function removeTabFromStateManagementStore(tabId, withChildren = false) {
     chrome.storage.local.set({ stateManagementStore });
 }
 
-deleteTree = (tab) => {
+function deleteTree(tab) {
     // base case
     if (!tab?.id) return
     
@@ -116,47 +118,47 @@ deleteTree = (tab) => {
     }
     delete stateManagementStore[tab.id]
     
-    children = getChildrenNodes(tab.id)
+    let children = getChildrenNodes(tab.id)
     // terminate the recursion
-    if (!children) return
+    if (children.length) return
 
     children.forEach((child) => {
         deleteTree(child)
     })
 }
 
-getParentNode = (tabId) => {
+function getParentNode(tabId) {
     // Get the node from the map
-    parentTabId = stateManagementStore[tabId]?.parentTab
+    let parentTabId = stateManagementStore[tabId]?.parentTab
 
     // returns parentTab 
     // returns null if parentTabId is undefined
     return stateManagementStore[parentTabId]
 }
 
-getChildrenNodes = (nodeId) => {
+function getChildrenNodes(nodeId) {
     // Get the node from the map
     // Return the children nodes
-    childrenIds = stateManagementStore[nodeId]?.children
+    let childrenIds = stateManagementStore[nodeId]?.childTabIds
     
     if (!childrenIds) return null
     
     // Get the children nodes from the map
-    childrenNodes = []
+    let childrenNodes = []
     childrenIds.forEach((childId) => {
         childrenNodes.push(stateManagementStore[childId])
     })
     return childrenNodes
 }
 
-getCurrentPosition = (nodeId) => {
+function getCurrentPosition(nodeId) {
     // Get the node from the map
     // Return the position
     stateManagementStore[nodeId]?.position
 }
 
 // should update ancestors and siblings position (Children position should be relative to parent automatically)
-updatePositionOfNode = (nodeId, newPosition) => {
+function updatePositionOfNode(nodeId, newPosition) {
     // Get the node from the map
     // Update the position
     // Update the position of the ancestors
@@ -167,12 +169,12 @@ updatePositionOfNode = (nodeId, newPosition) => {
 // recursive calls to update all ancestors
 // should be called after updating the position of the node
 // Check if this is the right way to do it and if this is needed
-UpdatePositionOfAncestors = (nodeId, nodePosition) => {
+function updatePositionOfAncestors(nodeId, nodePosition) {
     // Get the node from the map
     // Update the position of the all ancestors of the given node
 }
 
-UpdatePositionOfSiblings = (nodeId, nodePosition) => {
+function updatePositionOfSiblings(nodeId, nodePosition) {
     // Get the node from the map
     // Update the position of the all siblings of the given node
 }

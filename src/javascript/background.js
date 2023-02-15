@@ -1,4 +1,4 @@
-import { createStateManagementStore, addTabToStateManagementStore, removeTabFromStateManagementStore } from './store-management-service.js';
+import { createStateManagementStore, addTabToStateManagementStore, removeTabFromStateManagementStore } from './service/store-management-service.js';
 
 chrome.runtime.onInstalled.addListener(() => {
   // create tree when extension is initialized or
