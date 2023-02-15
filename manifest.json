@@ -22,7 +22,9 @@
     "tabGroups",
     "storage",
     "scripting",
-    "unlimitedStorage"
+    "unlimitedStorage",
+    "history",
+    "sessions"
   ],
   "host_permissions": ["http://*/*", "https://*/*"]
 }

@@ -7,6 +7,7 @@ class Tab {
 
     // TODO might need to add more properties as per need
     constructor(id, parentTabId = null, childrenTabIds = [], position) {
+        // use url as id, as Tab id changes between sessions (window open and close)
         this.id = id;
         this.parentTabId = parentTabId;
         this.childTabIds = childrenTabIds;
