@@ -132,7 +132,7 @@ export function removeTabFromStateManagementStore(windowId, tabId, withChildren 
     if (!tabNode) return
 
     // update children nodes with the new parent and position
-    if (!tabNode.childTabIds) {
+    if (!withChildren) {
         // delete the node from the map
         delete stateManagementStore[tabId]
 
