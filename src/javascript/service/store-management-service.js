@@ -1,17 +1,21 @@
 // Tab structure
 class Tab {
     // id: unique id of the tab
+    // url: url of the tab
     // parentTabId: id of the parent tab
     // childTabIds: ids of the children tabs
     // position: position of the tab
+    // isCollapsed: is the tab collapsed or not
 
     // TODO might need to add more properties as per need
-    constructor(id, parentTabId = null, childrenTabIds = [], position) {
+    constructor(id, url, parentTabId = null, childrenTabIds = [], position, isCollapsed = true) {
         // use url as id, as Tab id changes between sessions (window open and close)
         this.id = id;
+        this.url = url;
         this.parentTabId = parentTabId;
         this.childTabIds = childrenTabIds;
         this.position = position;
+        this.isCollapsed = isCollapsed;
     }
 
     // used to update the tab information only when there is a change
@@ -19,65 +23,88 @@ class Tab {
         if(!tab) return this;
 
         this.id = this.id || tab?.id;
+        this.url = this.url || tab?.url;
         this.parentTabId = this.parentTabId || tab?.parentTabId;
         this.childTabIds = [...this.childTabIds, ...tab?.childTabIds];
         this.position = this.position || tab?.position;
+        this.isCollapsed = this.isCollapsed || tab?.isCollapsed;
     }
 }
 
-// State management store for the tab tree
-let stateManagementStore = {} 
+// To store in local storage with window id (Double check for something that won't get changed) as key and value as the state management store
+let windowTabManagementStore = {};
 
-// Create a state management hash table and save it to local storage when the extension is installed
-export function createStateManagementStore(tabs) {
+/*
+TODO: finalize the key for both the stores
+Case that needs to be handled: window restore, url changes, tab move
+
+In background.js, add listener for expand/collapse of tabs and call updateCollapsedState(windowId, tabId, isCollapsed)
+
+Sample data structure:
+
+windowTabManagementStore = {
+    windowId: stateManagementStore
+}
+
+stateManagementStore = {
+    tabId: tabNode(id, url, parentTabId, childrenTabIds, position, isCollapsed)
+}
+*/
+
+// Create a window tab management hash table and save it to local storage when the extension is installed
+export function createWindowManagementStore(tabs) {
     // Create nodes from browser tabs information
-    // Create a map of Tabs, id -> Tab
+    let stateManagementStore = {};
     tabs.forEach((tab) => {
+        stateManagementStore = windowTabManagementStore[tab.windowId] || {};
         // update the tab with the updated information in cases where the tab is already present in the map
-        var tabNode = new Tab(tab.id, tab.openerTabId, [], tab.index);
+        var tabNode = new Tab(tab.id, tab.url, tab.openerTabId, [], tab.index);
         stateManagementStore[tab.id] = tabNode.updateTab(stateManagementStore[tab.id])
         
         // update the parent tab with the child tab id
         // updated with children tab id, incase any existing children it'll append to the existing children
         if (tab.openerTabId) {
-            var parentTab = new Tab(tab.openerTabId, null, [tab.id], null);
+            var parentTab = new Tab(tab.openerTabId, tab.url, null, [tab.id], null);
             stateManagementStore[tab.openerTabId] = parentTab.updateTab(stateManagementStore[tab.openerTabId])
         }
+        windowTabManagementStore[tab.windowId] = stateManagementStore;
     });
 
-    console.log(stateManagementStore);
-    chrome.storage.local.set({ stateManagementStore });
+    console.log("#createWindowManagementStore - window tab management store is created", windowTabManagementStore);
+    chrome.storage.local.set({ windowTabManagementStore });
 }
 
 // add Tab to the state management store
-export function addTabToStateManagementStore(tab) {
+export function addTabToStateManagementStore(windowId, tab) {
     // Create and Add the node to the map
-    // update the position of the node
-    // update the parent tab with the child tab id
-    // Save the map to local storage
-
-    // Create and Add the node to the map
-    stateManagementStore[tab.id] = new Tab(tab.id, tab.openerTabId, [], tab.index);
+    let stateManagementStore = windowTabManagementStore[windowId] || {};
+    stateManagementStore[tab.id] = new Tab(tab.id, tab.url, tab.openerTabId, [], tab.index);
 
     // update the position of the node
     // WIP
     
     // update the parent tab with the child tab id
+    // Expand the parent tab when new tab is added from existing tab
     if (tab.openerTabId) {
-        var parentTab = new Tab(tab.openerTabId, null, [tab.id], null);
+        var parentTab = new Tab(tab.openerTabId, tab.url, null, [tab.id], null, false);
         stateManagementStore[tab.openerTabId] = parentTab.updateTab(stateManagementStore[tab.openerTabId])
     }
-    chrome.storage.local.set({ stateManagementStore });
+    windowTabManagementStore[windowId] = stateManagementStore;
+
+    // Save the object to local storage
+    console.log("#addTabToStateManagementStore - window tab management store is updated", windowTabManagementStore[windowId]);
+    chrome.storage.local.set({ windowTabManagementStore });
 }
 
 // remove Tab from the state management store
-export function removeTabFromStateManagementStore(tabId, withChildren = false) {
+export function removeTabFromStateManagementStore(windowId, tabId, withChildren = false) {
     // Get the node from the map
     // Remove the node from the parent node
     // update children nodes with the new parent and position
     // in case of withChildren = true, remove all the children nodes for that node recursively
     // Remove the node from the map
 
+    let stateManagementStore = windowTabManagementStore[windowId] || {};
     // Get the node from the map
     var tabNode = stateManagementStore[tabId]
     if (!tabNode) return
@@ -101,13 +128,17 @@ export function removeTabFromStateManagementStore(tabId, withChildren = false) {
     // in case of withChildren = true, remove all the children nodes for that node recursively
     // updates the parentNode and then deletes the node with all the children
     else {
-        deleteTree(tabNode)
+        deleteTree(tabNode, stateManagementStore)
     }
 
-    chrome.storage.local.set({ stateManagementStore });
+    windowTabManagementStore[windowId] = stateManagementStore;
+
+    // Save the object to local storage
+    console.log("#removeTabFromStateManagementStore - window tab management store is updated", windowTabManagementStore[windowId]);
+    chrome.storage.local.set({ windowTabManagementStore });
 }
 
-function deleteTree(tab) {
+function deleteTree(tab, stateManagementStore) {
     // base case
     if (!tab?.id) return
     
@@ -119,13 +150,27 @@ function deleteTree(tab) {
     }
     delete stateManagementStore[tab.id]
     
-    let children = getChildrenNodes(tab.id)
+    let children = getChildrenNodes(tab.id, stateManagementStore)
     // terminate the recursion
     if (children.length) return
 
     children.forEach((child) => {
-        deleteTree(child)
+        deleteTree(child, stateManagementStore)
     })
+}
+
+export function updateCollapsedState(windowId, tabId, isCollapsed) {
+    let stateManagementStore = windowTabManagementStore[windowId] || {};
+    // Get the node from the map
+    let tabNode = stateManagementStore[tabId]
+    if (!tabNode) return
+
+    // update the collapsed state
+    tabNode.isCollapsed = isCollapsed
+
+    windowTabManagementStore[windowId] = stateManagementStore;
+    // Save the object to local storage
+    chrome.storage.local.set({ windowTabManagementStore });
 }
 
 function getParentNode(tabId) {
@@ -137,12 +182,12 @@ function getParentNode(tabId) {
     return stateManagementStore[parentTabId]
 }
 
-function getChildrenNodes(nodeId) {
+function getChildrenNodes(tabId, stateManagementStore) {
     // Get the node from the map
     // Return the children nodes
-    let childrenIds = stateManagementStore[nodeId]?.childTabIds
+    let childrenIds = stateManagementStore[tabId]?.childTabIds
     
-    if (!childrenIds) return null
+    if (!childrenIds) return [];
     
     // Get the children nodes from the map
     let childrenNodes = []
@@ -164,7 +209,7 @@ function updatePositionOfNode(nodeId, newPosition) {
     // Update the position
     // Update the position of the ancestors
     // Update the position of the siblings
-    // Save the map to local storage
+    // Save the object to local storage
 }
 
 // recursive calls to update all ancestors
