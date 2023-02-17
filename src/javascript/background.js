@@ -23,6 +23,9 @@ chrome.tabs.onCreated.addListener((tab) => {
   addTabToStateManagementStore(tab.windowId, tab);
 })
 
+// on tab update (change in URL)
+
+
 // on tab remove
 chrome.tabs.onRemoved.addListener((tabId, removeInfo) => {
   console.log("tab removed", tabId, removeInfo);
