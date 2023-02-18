@@ -188,6 +188,7 @@ export function restoreBrowserWindow(newWindowId) {
 
         // get old tab from the oldWindowStore
         let oldTab = oldWindowStore[oldTabId]
+
         // update the newTab with the oldTab information for successful restoration
         tab = tab.updateTabInfo({ parentTabId: oldTab.parentTabId, parentTabUrl: oldTab.parentTabUrl, childTabIds: oldTab.childTabIds, position: oldTab.position, isCollapsed: oldTab.isCollapsed });
     });
