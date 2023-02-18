@@ -8,7 +8,7 @@ class Tab {
     // isCollapsed: is the tab collapsed or not
 
     // TODO might need to add more properties as per need
-    constructor(id, url, parentTabId = null, parentTabUrl = null, childrenTabIds = [], position, isCollapsed = true) {
+    constructor(id, url, parentTabId = null, parentTabUrl = null, childrenTabIds = [], position, isCollapsed = true, title = '') {
         // use url as id, as Tab id changes between sessions (window open and close)
         this.id = id;
         this.url = url;
@@ -17,6 +17,7 @@ class Tab {
         this.childTabIds = childrenTabIds;
         this.position = position;
         this.isCollapsed = isCollapsed;
+        this.title = title;
         this.key = this.hashCode(`${this.url}~${this.position}`);
     }
 
@@ -40,7 +41,7 @@ class Tab {
     }
 
     getKey() {
-        return this.key || this.hashCode(`${this.url}~${this.position}`);
+        return this.id //this.hashCode(`${this.url}~${this.position}`);
     }
 }
 
@@ -75,14 +76,14 @@ export function createWindowManagementStore(tabs) {
         // find opener tab url from the openerTabId, as the opener tab url is not available in the tab object
         // we only need to search for tabs in the same window
         let openerTab = tab.openerTabId ? Object.values(stateManagementStore).find(t => t.id === tab.openerTabId) : null;
-        let tabNode = new Tab(tab.id, tabUrl, tab.openerTabId, openerTab?.url, [], tab.index);
+        let tabNode = new Tab(tab.id, tabUrl, tab.openerTabId, openerTab?.url, [], tab.index, true, tab.title);
         stateManagementStore[tabNode.getKey()] = tabNode.updateTab(stateManagementStore[tabUrl])
         
         // update the parent tab with the child tab id
         // updated with children tab id, incase any existing children it'll append to the existing children
         // Assumption: parentTab is present in the stateManagementStore
         if (tab.openerTabId) {
-            let parentTab = new Tab(tab.openerTabId, openerTab?.url, null, null, [tab.id], openerTab?.position);
+            let parentTab = new Tab(tab.openerTabId, openerTab?.url, null, null, [tab.id], openerTab?.position, true, tab.title);
             stateManagementStore[parentTab.getKey()] = parentTab.updateTab(stateManagementStore[parentTab.getKey()]);
         }
         windowTabManagementStore[tab.windowId] = stateManagementStore;
@@ -99,7 +100,7 @@ export function addTabToStateManagementStore(windowId, tab) {
     let tabUrl = tab.status === 'complete' ? tab.url : tab.pendingUrl;
     // find opener tab from the openerTabId, as the opener tab url is not available in the tab object
     let openerTab = tab.openerTabId ? Object.values(stateManagementStore).find(t => t.id === tab.openerTabId) : null;
-    let tabNode = new Tab(tab.id, tabUrl, tab.openerTabId, openerTab?.url, [], tab.index);
+    let tabNode = new Tab(tab.id, tabUrl, tab.openerTabId, openerTab?.url, [], tab.index, true, tab.title);
     stateManagementStore[tabNode.getKey()] = tabNode;
 
     // update the position of the node
@@ -108,7 +109,7 @@ export function addTabToStateManagementStore(windowId, tab) {
     // update the parent tab with the child tab id
     // Expand the parent tab when new tab is added from existing tab
     if (tab.openerTabId) {
-        let parentTab = new Tab(tab.openerTabId, openerTab?.url, null, null, [tab.id], openerTab?.position, false);
+        let parentTab = new Tab(tab.openerTabId, openerTab?.url, null, null, [tab.id], openerTab?.position, true, tab.title);
         stateManagementStore[parentTab.getKey()] = parentTab.updateTab(stateManagementStore[parentTab.getKey()])
     }
     windowTabManagementStore[windowId] = stateManagementStore;
