@@ -1,0 +1,58 @@
+#popup {
+  height: 600px;
+  width: 300px;
+}
+
+.tab-element {
+  height: 24px;
+  padding: 4px 16px 4px 0px;  
+  vertical-align: middle;
+}
+.tab-element:hover {
+  background-color: #e6e6e6; 
+}
+
+.tab-title {
+  width: 218px;
+  /* overflow property */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  display: inline-block;
+}
+
+.close-button {
+  float: right;
+  margin-left: 8px;
+  background: none;
+	color: inherit;
+	border: none;
+	padding: 0;
+}
+/* on hover effect */
+.close-button:hover {
+  border: 1px solid #e6e6e6;
+}
+
+.expand-collapse-button {
+  float: left;
+  margin-right: 4px;
+	background: none;
+	color: inherit;
+	border: none;
+	padding: 0;
+}
+
+.no-child {
+  padding-left: 16px;
+  padding-right: 16px;
+}
+
+.space {
+  margin-left: 8px;
+}
+
+/* not first child of .tab-container gets 16px padding left */
+.tab-container > *:not(:first-child) {
+  padding-left: 16px;
+}
