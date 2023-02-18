@@ -1,9 +1,8 @@
-import { createWindowManagementStore, addTabToStateManagementStore, removeTabFromStateManagementStore, restoreBrowserWindow } from './service/store-management-service.js';
+import { createWindowManagementStore, addTabToStateManagementStore, removeTabFromStateManagementStore, restoreBrowserWindow, updateTabForWindow } from './service/store-management-service.js';
 
 chrome.runtime.onInstalled.addListener(() => {
   // create tree when extension is initialized or reloaded
   // browser is restarted
-  console.log(chrome.sessions);
   chrome.sessions.getRecentlyClosed({ maxResults: 1 }, (sessions) => {
     // window tel
     console.log("recently closed", sessions)
@@ -32,9 +31,21 @@ chrome.tabs.onCreated.addListener((tab) => {
 
 // on tab update
 chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
-  // deal with URL change, collapsed/state change
   // console.log("tab updated", tabId, changeInfo, tab);
+
+  // In loading state, title is not present for a new clicked tab
+  // Update title when tab status is complete
+  if (changeInfo?.status === "complete") {
+    changeInfo.title = tab.title;
+  }
+  // TODO: can we add debounce to avoid multiple updates?
+  // In case of url changes - manual or using back/forward button continuously can trigger multiple updates
+  updateTabForWindow(tab.windowId, tabId, changeInfo);
 })
+
+
+// TODO: Update collapsed/expand state change with button listener, Use updateTabForWindow
+
 
 // on tab remove
 chrome.tabs.onRemoved.addListener((tabId, removeInfo) => {

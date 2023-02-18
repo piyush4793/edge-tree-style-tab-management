@@ -35,17 +35,19 @@ Restore the windowTabManagementStore using local storage
 */
 
 // Tab structure
+/*
+    This is the structure of the tab that is stored in the stateManagementStore
+    id: unique id of the tab
+    url: url of the tab
+    parentTabId: id of the parent tab
+    childTabIds: ids of the children tabs
+    position: position of the tab
+    isCollapsed: is the tab collapsed or not
+    title: title of the tab
+    key: unique key for the tab
+*/
 class Tab {
-    // id: unique id of the tab
-    // url: url of the tab
-    // parentTabId: id of the parent tab
-    // childTabIds: ids of the children tabs
-    // position: position of the tab
-    // isCollapsed: is the tab collapsed or not
-
-    // TODO might need to add more properties as per need
     constructor(id, url, parentTabId = null, parentTabUrl = null, childrenTabIds = [], position, isCollapsed = true, title = '') {
-        // use url as id, as Tab id changes between sessions (window open and close)
         this.id = id;
         this.url = url;
         this.parentTabId = parentTabId;
@@ -87,19 +89,21 @@ class Tab {
         this.childTabIds = tabInfo?.childTabIds || this.childTabIds;
         this.position = tabInfo?.position || this.position;
         this.isCollapsed = tabInfo?.isCollapsed || this.isCollapsed;
+        this.title = tabInfo?.title || this.title;
         this.key = tabInfo?.key || this.key || this.getKey();
         return this;
     }
 
+    // Get the key for the tab
     getKey() {
         return this.key || this.id
     }
 }
 
-// To store in local storage with window id (Double check for something that won't get changed) as key and value as the state management store
+// To store in local storage with key => windowId and value => stateManagementStore
 let windowTabManagementStore = {};
 
-// Create a window tab management hash table and save it to local storage when the extension is installed
+// Create a windowTabManagementStore hash table and save it to local storage when the extension is installed
 export function createWindowManagementStore(tabs) {
     // Create nodes from browser tabs information
     let stateManagementStore = {};
@@ -117,8 +121,9 @@ export function createWindowManagementStore(tabs) {
         // updated with children tab id, incase any existing children it'll append to the existing children
         // Assumption: parentTab is present in the stateManagementStore
         if (tab.openerTabId) {
-            let parentTab = new Tab(tab.openerTabId, openerTab?.url, null, null, [tab.id], openerTab?.position, true, tab.title);
-            stateManagementStore[parentTab.getKey()] = parentTab.updateTab(stateManagementStore[parentTab.getKey()]);
+            let openerTabChildTabIds = openerTab.childTabIds;
+            openerTabChildTabIds.push(tab.id);
+            stateManagementStore[openerTab.getKey()] = openerTab.updateTabInfo({ childTabIds: openerTabChildTabIds, isCollapsed: false });
         }
         windowTabManagementStore[tab.windowId] = stateManagementStore;
     });
@@ -127,14 +132,25 @@ export function createWindowManagementStore(tabs) {
     chrome.storage.local.set({ windowTabManagementStore });
 }
 
-function isWindowMatched(arr1, arr2) {
-    if (arr1.length === arr2.length) {
-        let intersection = arr1.filter(x => arr2.includes(x));
-        return intersection.length === arr1.length ? true : false;
+// Check if all URLs in window1 are present in window2
+function isWindowMatched(window1, window2) {
+    if (window1.length === window2.length) {
+        let intersection = window1.filter(x => window2.includes(x));
+        return intersection.length === window1.length ? true : false;
     }
     return false;
 }
 
+/*
+    Get the matchedWindowId from the windowTabManagementStore
+
+    NOTE: We are not deleting stateManagementStore from the windowTabManagementStore when the window is closed
+
+    Algorithm:
+    1. Get newStateManagementStore from windowTabManagementStore
+    2. Get list of all tab urls (restoredTabUrls) from newStateManagementStore
+    3. Iterate over windowTabManagementStore and find the windowId whose tab urls are matched with the restoredTabUrls
+*/
 function getMatchedWindowId(newWindowId) {
     let newStateManagementStore = windowTabManagementStore[newWindowId];
     let restoredTabUrls = Object.values(newStateManagementStore).map(tab => tab.url);
@@ -226,8 +242,9 @@ export function addTabToStateManagementStore(windowId, tab) {
     // update the parent tab with the child tab id
     // Expand the parent tab when new tab is added from existing tab
     if (tab.openerTabId) {
-        let parentTab = new Tab(tab.openerTabId, openerTab?.url, null, null, [tab.id], openerTab?.position, true, tab.title);
-        stateManagementStore[parentTab.getKey()] = parentTab.updateTab(stateManagementStore[parentTab.getKey()])
+        let openerTabChildTabIds = openerTab.childTabIds;
+        openerTabChildTabIds.push(tab.id);
+        stateManagementStore[openerTab.getKey()] = openerTab.updateTabInfo({ childTabIds: openerTabChildTabIds, isCollapsed: false });
     }
     windowTabManagementStore[windowId] = stateManagementStore;
 
@@ -305,11 +322,28 @@ export function updateTabForWindow(windowId, tabId, tabInfo) {
     let tabNode = stateManagementStore[tabId]
     if (!tabNode) return;
 
+    let isChanged = false;
+    if (tabInfo?.url && tabInfo?.url !== tabNode.url) {
+        // update the url for the node
+        tabNode.url = tabInfo.url;
+        isChanged = true;
+    } else if (tabInfo?.title && tabInfo?.title !== tabNode.title) {
+        // When new tabs are opened, in loading state title of the tab is missing
+        // We need to update title when the tab status is completed
+        // update the title for the node
+        tabNode.title = tabInfo.title;
+        isChanged = true;
+    }
+
+    // No attribute for tabNode got changed then return
+    if (!isChanged) return;
+
     // update the tab info
-    stateManagementStore[tabId] = tabNode.updateTabInfo(tabInfo)
+    stateManagementStore[tabId] = tabNode
 
     windowTabManagementStore[windowId] = stateManagementStore;
     // Save the object to local storage
+    console.log("#updateTabForWindow - window tab management store is updated", windowTabManagementStore[windowId]);
     chrome.storage.local.set({ windowTabManagementStore });
 }
 
