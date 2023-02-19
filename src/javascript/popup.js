@@ -1,41 +1,53 @@
 /*
 TODO:
-  - Adjust the overflow of the button in the child tabs
-  - Add the functionality to expand and collapse the child tabs (need a reconstruct and destroy tree function)
+  - Adjust the overflow of the button in the child tabs 
+  - Add the functionality to expand and collapse the child tabs (need a reconstruct and destroy tree function) - done
+    - send update tree (expand collapse) to the background script - done
+  - Modify the folder structure to add tree generation to a helper file
   - tab on click to focus the tab to active tab
   - Add the functionality to close the tabs (partially done, need to reconstruct the associated tree)
-  - send update tree (expand collapse) to the background script
-  - get the updated tree from the background script (regeneration)
+  - get the updated tree from the background script (regeneration) needed ??
 
-  
   - port this to react to make the state management easier (maybe)
 */
 
+// state management store for tabs
+let sms = {}
+let currentWindowId = 0;
+
 chrome.storage.local.get('windowTabManagementStore').then((store) => {
   chrome.windows.getCurrent((window) => {
-    let sms = store.windowTabManagementStore[window.id]
+    sms = store.windowTabManagementStore[window.id]
+    currentWindowId = window.id;
     
     // array containing the tabs sorted by it's position in the sms storage for current window
     // sort the values of sms object by position and store it in sortedSms array
     let sortedSms = Object.values(sms).sort((a, b) => a.position - b.position)
-    console.log(sortedSms)
+    console.log('sorted tabs list based on position', sortedSms)
 
-    generateTabTree(sortedSms, sms);
-    
+    generateTabTree(sortedSms);
   })
 })
 
-function generateTabTree(sortedSms, sms) {
+// tree creation functions
+
+function generateTabTree(sortedSms) {
   // create a html element for each tab in the sortedSms array
   let popup = document.getElementById('tabs-container')
   sortedSms.forEach((tab) => {
-    let tabElement = createTabElement(tab, sms)
-    popup.appendChild(tabElement)
+
+    // don't add the tab if it's parent is collapsed
+    let isTabHidden = isAncestorTabCollapsed(tab);
+    if (isTabHidden) return;
+
+    let tabElement = createTabElement(tab);
+    // insert only when tabElement exsits
+    if(!!tabElement) popup.appendChild(tabElement);
   })
 }
 
 
-function createTabElement(tab, sms, level = 0) {
+function createTabElement(tab, level = 0) {
   //  tab should have the following structure
   //  tab (tC)
   //    - tabElement (tE)
@@ -49,6 +61,7 @@ function createTabElement(tab, sms, level = 0) {
 
   let tC = document.createElement('div')
   tC.classList.add('tab-container')
+  tC.id = tab.id
   // add current tab to the tab container
   let tE = createTabElementStructure(tab, level)
   tC.appendChild(tE)
@@ -56,8 +69,7 @@ function createTabElement(tab, sms, level = 0) {
   // add child tabs to the tab container recursively
   if (tab.childTabIds.length > 0 && !tab.isCollapsed) {
     tab.childTabIds.forEach((childTabId) => {
-      console.log(sms, childTabId);
-      let childTab = createTabElement(sms[parseInt(childTabId)], sms, level + 1);
+      let childTab = createTabElement(sms[parseInt(childTabId)], level + 1);
       tC.appendChild(childTab)
     })
   }
@@ -68,15 +80,13 @@ function createTabElement(tab, sms, level = 0) {
 function createTabElementStructure(tab, level) {
   let tabElement = document.createElement('div')
   tabElement.classList.add('tab-element')
-  tabElement.id = tab.id
 
   if (tab.childTabIds.length > 0) { 
-    console.log('child tab exists', tab)
     let expandCollapseButton = document.createElement('button')
     // add on click to expand collapse button
-    expandCollapseButton.onclick = (e) => onclickExpandCollapseButton(e)
+    expandCollapseButton.onclick = (e) => onclickExpandCollapseButton(e, sms)
     expandCollapseButton.classList.add('expand-collapse-button')
-    expandCollapseButton.innerText = tab.collapsed ? '►' : '▼'
+    expandCollapseButton.innerText = tab.isCollapsed ? '►' : '▼'
     tabElement.appendChild(expandCollapseButton)
   }
   else {
@@ -100,19 +110,98 @@ function createTabElementStructure(tab, level) {
   return tabElement
 }
 
-function onclickExpandCollapseButton(event) {
+// tree helper functions
+
+// determines if the tab is a child of a collapsed tab
+function isAncestorTabCollapsed(tab) {
+  if (!tab.parentTabId) return false;
+  let parentTab = sms[tab.parentTabId];
+  if (parentTab.isCollapsed) return true;
+  return isAncestorTabCollapsed(parentTab);
+}
+
+// expand collapse tree helper
+function expandCollapseTree(tab, collapse) {
+  // expand or collapse the tree based on the tab.isCollapsed property
+  // if the tab is collapsed, remove the child tabs from the dom
+  // if the tab is expanded, add the child tabs to the dom
+
+  // if the tab is collapsed, remove the child tabs from the dom
+  if (collapse) {
+    if (tab.childTabIds.length > 0) {
+      tab.childTabIds.forEach((childTabId) => {
+        let cTC = document.getElementById(`${childTabId}`);
+        cTC.remove();
+      })
+    }
+  }
+  // if the tab is expanded, add the child tabs to the dom
+  else {
+    if (tab.childTabIds.length > 0) {
+      // add the child tabs to the dom
+      let tC = document.getElementById(`${tab.id}`);
+      tab.childTabIds.forEach((childTabId) => {
+        // createTabElement for each child and add to the parent tab element
+        let cTC = createTabElement(sms[childTabId]);
+        tC.appendChild(cTC);
+      })
+    }
+  }
+}
+
+// update the parent tab of the child tabs in the dom
+function updateParentTab(childTabs, parentTab) {
+  // add the child tabs to the parent tab
+  let pTC = document.getElementById(`${parentTab.id}`);
+  childTabs.forEach((childTab) => {
+    let cTC = document.getElementById(`${childTab.id}`);
+    // dont update the child tab position if it's not in the dom
+    if (!cTC) return
+
+    pTC.appendChild(cTC);
+  })
+}
+
+
+// Click event handlers 
+// - onclickExpandCollapseButton
+// - onclickCloseButton
+
+function onclickExpandCollapseButton(event, sms) {
   event.target.innerText = event.target.innerText === '►' ? '▼' : '►'
-  // add the expanded child here
+
+  // expand or collapse the tree based on the tab.isCollapsed property
+  let tab = sms[parseInt(event.target?.parentNode?.parentNode.id)]
+  expandCollapseTree(tab, event.target.innerText === '►')
+
+  // send isCollapsed tab property to the background script
+  chrome.runtime.sendMessage({
+    type: 'updateTab',
+    tabId: tab.id,
+    windowId: currentWindowId,
+    changeInfo: {
+      isCollapsed: event.target.innerText === '►'
+    }
+  })
 }
 
 function onclickCloseButton(event) {
   // close the tab here
   try {
-    // this will trigger a tree closed event in the background script
-    chrome.tabs.remove(parseInt(event.target.parentNode.id));
+    // this will automatically trigger a tree closed event in the background script
+    // button -> tabElement -> tabContainer
+    chrome.tabs.remove(parseInt(event.target?.parentNode?.parentNode.id));
 
-    event.target.parentNode.remove();
-    // redraw the tab parent element to adjust the padding
+    // before removing add the children of the removed tab to the removed tab's parent in the dom
+    let childTabsIds = sms[parseInt(event.target?.parentNode?.parentNode.id)].childTabIds;
+    let childTabs = childTabsIds.map((childTabId) => sms[childTabId]);
+    let parentTab = sms[sms[parseInt(event.target?.parentNode?.parentNode.id)].parentTabId];
+    updateParentTab(childTabs, parentTab);
+    
+    // remove the tab from the dom
+    event.target?.parentNode?.parentNode.remove();
+
+    // check if redraw the tab parent element to adjust the padding ??
   }
   catch (e) {
     console.log('tab removal failed', e)

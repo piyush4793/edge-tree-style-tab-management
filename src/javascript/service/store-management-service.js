@@ -1,3 +1,5 @@
+import { tabUpdateMessageHandler } from './message-service.js';
+
 /*
 WORKINGS OF THE EXTENSION
 
@@ -105,6 +107,11 @@ let windowTabManagementStore = {};
 
 // Create a windowTabManagementStore hash table and save it to local storage when the extension is installed
 export function createWindowManagementStore(tabs) {
+    
+    // register message handler
+    // TODO - make it more generic
+    tabUpdateMessageHandler(updateTabForWindow);
+
     // Create nodes from browser tabs information
     let stateManagementStore = {};
     tabs.forEach((tab) => {
@@ -332,6 +339,11 @@ export function updateTabForWindow(windowId, tabId, tabInfo) {
         // We need to update title when the tab status is completed
         // update the title for the node
         tabNode.title = tabInfo.title;
+        isChanged = true;
+    } else if (String(tabInfo?.isCollapsed) && tabInfo?.isCollapsed !== tabNode.isCollapsed) {
+        // String(true || false) will return non empty string to check presence of the value
+        // update the isCollapsed for the node
+        tabNode.isCollapsed = tabInfo.isCollapsed;
         isChanged = true;
     }
 
