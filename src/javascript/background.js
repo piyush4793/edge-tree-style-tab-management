@@ -1,4 +1,5 @@
 import { createWindowManagementStore, addTabToStateManagementStore, removeTabFromStateManagementStore, restoreBrowserWindow, updateTabForWindow } from './service/store-management-service.js';
+import { tabUpdateMessageHandler } from './service/message-service.js';
 
 chrome.runtime.onInstalled.addListener(() => {
   // create tree when extension is initialized or reloaded
@@ -42,9 +43,6 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
   // In case of url changes - manual or using back/forward button continuously can trigger multiple updates
   updateTabForWindow(tab.windowId, tabId, changeInfo);
 })
-
-
-// TODO: Update collapsed/expand state change with button listener, Use updateTabForWindow
 
 
 // on tab remove
