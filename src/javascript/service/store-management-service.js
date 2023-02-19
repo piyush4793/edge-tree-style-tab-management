@@ -176,7 +176,7 @@ export function restoreBrowserWindow(newWindowId) {
 
     // Find matching old window store
     let matchedWindowId = getMatchedWindowId(newWindowId);
-    console.log("#restoreBrowserWindow - matchedWindowId", matchedWindowId);
+    console.log(`#restoreBrowserWindow - matchedWindowId: ${matchedWindowId}`);
 
     // Return when no matchedWindowId is found
     // Restoration failed for the browser window
@@ -225,12 +225,24 @@ export function restoreBrowserWindow(newWindowId) {
     // update the windowTabManagementStore with the new window data
     windowTabManagementStore[newWindowId] = newStateManagementStore;
 
+    console.log('old store: ', oldWindowStore, ' and new store: ', newStateManagementStore);
+
     // delete the old window data from the windowTabManagementStore
     delete windowTabManagementStore[matchedWindowId];
 
-    console.log("#restoreBrowserWindow - Closed window is restored", windowTabManagementStore);
+    console.log(`#restoreBrowserWindow - Closed window is restored with windowId: ${newWindowId} and updated store: `, windowTabManagementStore);
     // save the updated windowTabManagementStore to local storage
     chrome.storage.local.set({ windowTabManagementStore });
+}
+
+// update the position of all nodes with index greater than or equal to the given index
+// NOTE: Skip the node with the given key
+function updatePositionOfNodesWithIndexGreaterThan(stateManagementStore, key, index, incrementBy = 1) {
+    Object.values(stateManagementStore).forEach((t) => {
+        if (t.key != key && t.position >= index) {
+            stateManagementStore[t.getKey()] = t.updateTabInfo({ position: t.position + incrementBy });
+        }
+    });
 }
 
 // add Tab to the state management store
@@ -243,8 +255,8 @@ export function addTabToStateManagementStore(windowId, tab) {
     let tabNode = new Tab(tab.id, tabUrl, tab.openerTabId, openerTab?.url, [], tab.index, true, tab.title);
     stateManagementStore[tabNode.getKey()] = tabNode;
 
-    // update the position of the node
-    // WIP
+    // increase position value by 1 for all nodes with position greater than or equal to the current tab index
+    updatePositionOfNodesWithIndexGreaterThan(stateManagementStore, tabNode.getKey(), tab.index);
     
     // update the parent tab with the child tab id
     // Expand the parent tab when new tab is added from existing tab
@@ -279,15 +291,30 @@ export function removeTabFromStateManagementStore(windowId, tabId, withChildren 
         delete stateManagementStore[tabId]
 
         // Remove the node from the parent node
-        var parentTab = stateManagementStore[tabNode.parentTabId]
+        let parentTab = stateManagementStore[tabNode.parentTabId]
         if (parentTab) {
             parentTab.childTabIds = parentTab.childTabIds.filter((childId) => childId !== tabId)
+            // add tabNode childTabIds to the parentTab childTabIds
+            parentTab = parentTab.updateTabInfo({ childTabIds: [...parentTab.childTabIds, ...tabNode.childTabIds] });
         }
 
         tabNode.childTabIds.forEach((childId) => {
-            var childTab = stateManagementStore[childId]
-            childTab.parentTabId = tabNode.parentTabId
-        }) // WIP position
+            let childTab = stateManagementStore[childId];
+            if (childTab) {
+                // update the child tab with the new parent tab id and url
+                if (parentTab) {
+                    childTab.parentTabId = tabNode.parentTabId;
+                    childTab.parentTabUrl = tabNode.parentTabUrl;
+                } else {
+                    // If top most tab is removed, then the child tab will not have parentTabId
+                    childTab.parentTabId = null;
+                    childTab.parentTabUrl = null;
+                }
+            }
+        })
+
+        // decrease position value by 1 for all the nodes with position greater than the removed node
+        updatePositionOfNodesWithIndexGreaterThan(stateManagementStore, tabNode.getKey(), tabNode.position, -1);
     }
     // in case of withChildren = true, remove all the children nodes for that node recursively
     // updates the parentNode and then deletes the node with all the children
@@ -372,41 +399,4 @@ function getChildrenNodes(tabId, stateManagementStore) {
         childrenNodes.push(stateManagementStore[childId])
     })
     return childrenNodes
-}
-
-function getParentNode(tabId) {
-    // Get the node from the map
-    let parentTabId = stateManagementStore[tabId]?.parentTab
-
-    // returns parentTab
-    // returns null if parentTabId is undefined
-    return stateManagementStore[parentTabId]
-}
-
-function getCurrentPosition(nodeId) {
-    // Get the node from the map
-    // Return the position
-    stateManagementStore[nodeId]?.position
-}
-
-// should update ancestors and siblings position (Children position should be relative to parent automatically)
-function updatePositionOfNode(nodeId, newPosition) {
-    // Get the node from the map
-    // Update the position
-    // Update the position of the ancestors
-    // Update the position of the siblings
-    // Save the object to local storage
-}
-
-// recursive calls to update all ancestors
-// should be called after updating the position of the node
-// Check if this is the right way to do it and if this is needed
-function updatePositionOfAncestors(nodeId, nodePosition) {
-    // Get the node from the map
-    // Update the position of the all ancestors of the given node
-}
-
-function updatePositionOfSiblings(nodeId, nodePosition) {
-    // Get the node from the map
-    // Update the position of the all siblings of the given node
 }
