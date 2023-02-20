@@ -165,22 +165,31 @@ function getMatchedWindowId(newWindowId) {
     // This is done to keep track of parentTabIds, childTabIds, position and isCollapsed while restoring the browser window
     return Object.keys(windowTabManagementStore).find((key) => {
         let store = windowTabManagementStore[key];
-        if (isWindowMatched(Object.values(store).map(tab => tab.url), restoredTabUrls)) {
+        if (key != newWindowId && isWindowMatched(Object.values(store).map(tab => tab.url), restoredTabUrls)) {
             return key;
         }
     });
 }
 
-export function restoreBrowserWindow(newWindowId) {
+export function restoreBrowserWindow(newWindowId, retry = 0) {
+    if (retry === 2) return;
+
     let newStateManagementStore = windowTabManagementStore[newWindowId];
 
     // Find matching old window store
     let matchedWindowId = getMatchedWindowId(newWindowId);
     console.log(`#restoreBrowserWindow - matchedWindowId: ${matchedWindowId}`);
 
-    // Return when no matchedWindowId is found
     // Restoration failed for the browser window
-    if (!matchedWindowId) return;
+    // If match is not found, then retrigger restoration after 20 more milliseconds. Fallback to handle cache miss
+    // Restoration can be slightly delayed, but it'll be better than not restoring at all
+    // retry for 2 times
+    if (!matchedWindowId) {
+        setTimeout(() => {
+            restoreBrowserWindow(newWindowId, retry + 1);
+        }, 20);
+        return;
+    }
 
     // Create a map with URL as key and list of tabIds as value for matchedWindowId
     /*
