@@ -195,7 +195,7 @@ export function restoreBrowserWindow(newWindowId, retry = 0) {
     /*
         Example: URL: array of ids
         {
-            abcd.com: [1, 2] [3],
+            abcd.com: [1, 2, 3],
             xyz.com: [4]
         }
     */
