@@ -70,6 +70,7 @@ function createTabElement(tab, level = 0) {
   if (tab.childTabIds.length > 0 && !tab.isCollapsed) {
     tab.childTabIds.forEach((childTabId) => {
       let childTab = createTabElement(sms[parseInt(childTabId)], level + 1);
+      console.log('added child', childTabId, childTab);
       tC.appendChild(childTab)
     })
   }
@@ -105,7 +106,7 @@ function createTabElementStructure(tab, level) {
   tabButton.innerText = 'x'
   tabElement.appendChild(tabButton)
 
-  // add padding to the tab element based on the level
+  // add padding to the tab element based on the level ??
 
   return tabElement
 }
@@ -150,11 +151,11 @@ function expandCollapseTree(tab, collapse) {
 }
 
 // update the parent tab of the child tabs in the dom
-function updateParentTab(childTabs, parentTab) {
-  // add the child tabs to the parent tab
-  let pTC = document.getElementById(`${parentTab.id}`);
-  childTabs.forEach((childTab) => {
-    let cTC = document.getElementById(`${childTab.id}`);
+function updateParentOfTabs(tabs, parentTab) {
+  // add the child tabs to the parent tab or the tabs-container if the parent tab is not present
+  let pTC = document.getElementById(`${parentTab.id}`) || document.getElementById('tabs-container');
+  tabs.forEach((tab) => {
+    let cTC = document.getElementById(`${tab.id}`);
     // dont update the child tab position if it's not in the dom
     if (!cTC) return
 
@@ -196,9 +197,10 @@ function onclickCloseButton(event) {
     let childTabsIds = sms[parseInt(event.target?.parentNode?.parentNode.id)].childTabIds;
     let childTabs = childTabsIds.map((childTabId) => sms[childTabId]);
     let parentTab = sms[sms[parseInt(event.target?.parentNode?.parentNode.id)].parentTabId];
-    updateParentTab(childTabs, parentTab);
+    updateParentOfTabs(childTabs, parentTab);
     
     // remove the tab from the dom
+    // button -> tabElement -> tabContainer
     event.target?.parentNode?.parentNode.remove();
 
     // check if redraw the tab parent element to adjust the padding ??
