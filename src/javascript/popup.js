@@ -153,8 +153,10 @@ function expandCollapseTree(tab, collapse) {
 // update the parent tab of the child tabs in the dom
 function updateParentOfTabs(tabs, parentTab) {
   // add the child tabs to the parent tab or the tabs-container if the parent tab is not present
-  let pTC = document.getElementById(`${parentTab.id}`) || document.getElementById('tabs-container');
+  // assumes that current tab if collapsed, child aren't present in the dom and hence not added to it's parent
+  let pTC = document.getElementById(`${parentTab?.id}`) || document.getElementById('tabs-container');
   tabs.forEach((tab) => {
+    // create the child tab in case it needs to be added to the parent tab in the use arises
     let cTC = document.getElementById(`${tab.id}`);
     // dont update the child tab position if it's not in the dom
     if (!cTC) return
@@ -163,6 +165,22 @@ function updateParentOfTabs(tabs, parentTab) {
   })
 }
 
+function removeTab(tab, removeTree) {
+  // incase of a single tab, trigger remove tab event
+  if(!removeTree) {
+    chrome.tabs.remove(tab.id);
+    console.log('removed tab', tab.id, removeTree);
+  }
+  // incase of a tree, remove the child tabs recursively
+  else {
+    chrome.tabs.remove(tab.id);
+    console.log('removed tab', tab.id);
+    tab.childTabIds.forEach((childTabId) => {
+      let childTab = sms[childTabId];
+      removeTab(childTab, true);
+    })
+  }
+}
 
 // Click event handlers 
 // - onclickExpandCollapseButton
@@ -189,9 +207,10 @@ function onclickExpandCollapseButton(event, sms) {
 function onclickCloseButton(event) {
   // close the tab here
   try {
-    // this will automatically trigger a tree closed event in the background script
     // button -> tabElement -> tabContainer
-    chrome.tabs.remove(parseInt(event.target?.parentNode?.parentNode.id));
+    // in case of collapsed tab, remove the child tabs also
+    let tab = sms[parseInt(event.target?.parentNode?.parentNode.id)];
+    removeTab(tab, tab.isCollapsed);
 
     // before removing add the children of the removed tab to the removed tab's parent in the dom
     let childTabsIds = sms[parseInt(event.target?.parentNode?.parentNode.id)].childTabIds;
@@ -202,8 +221,6 @@ function onclickCloseButton(event) {
     // remove the tab from the dom
     // button -> tabElement -> tabContainer
     event.target?.parentNode?.parentNode.remove();
-
-    // check if redraw the tab parent element to adjust the padding ??
   }
   catch (e) {
     console.log('tab removal failed', e)
