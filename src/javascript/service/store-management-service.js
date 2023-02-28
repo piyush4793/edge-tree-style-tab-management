@@ -49,15 +49,28 @@ Restore the windowTabManagementStore using local storage
     key: unique key for the tab
 */
 class Tab {
-    constructor(id, url, parentTabId = null, parentTabUrl = null, childrenTabIds = [], position, isCollapsed = true, title = '') {
+    constructor(tabInfo) {
+        const {
+          id,
+          url,
+          parentTabId = null,
+          childrenTabIds = [],
+          position,
+          isCollapsed = true,
+          title = "",
+          faviconUrl = "",
+          active = false,
+        } = tabInfo;
+        
         this.id = id;
         this.url = url;
         this.parentTabId = parentTabId;
-        this.parentTabUrl = parentTabUrl;
         this.childTabIds = childrenTabIds;
         this.position = position;
         this.isCollapsed = isCollapsed;
         this.title = title;
+        this.faviconUrl = faviconUrl;
+        this.active = active;
         this.key = this.getKey();
     }
 
@@ -72,7 +85,6 @@ class Tab {
         this.id = this.id || tab?.id;
         this.url = this.url || tab?.url;
         this.parentTabId = this.parentTabId || tab?.parentTabId;
-        this.parentTabUrl = this.parentTabUrl || tab?.parentTabUrl;
         this.childTabIds = [...this.childTabIds, ...tab?.childTabIds];
         this.position = this.position || tab?.position;
         this.isCollapsed = this.isCollapsed || tab?.isCollapsed;
@@ -87,7 +99,6 @@ class Tab {
         this.id = tabInfo?.id || this.id;
         this.url = tabInfo?.url || this.url;
         this.parentTabId = tabInfo?.parentTabId || this.parentTabId;
-        this.parentTabUrl = tabInfo?.parentTabUrl || this.parentTabUrl;
         this.childTabIds = tabInfo?.childTabIds || this.childTabIds;
         this.position = tabInfo?.position || this.position;
         this.isCollapsed = tabInfo?.isCollapsed || this.isCollapsed;
@@ -121,7 +132,18 @@ export function createWindowManagementStore(tabs) {
         // find opener tab url from the openerTabId, as the opener tab url is not available in the tab object
         // we only need to search for tabs in the same window
         let openerTab = tab.openerTabId ? Object.values(stateManagementStore).find(t => t.id === tab.openerTabId) : null;
-        let tabNode = new Tab(tab.id, tabUrl, tab.openerTabId, openerTab?.url, [], tab.index, true, tab.title);
+        const tabInfo = {
+            id: tab.id,
+            url: tabUrl,
+            parentTabId: tab.openerTabId,
+            childrenTabIds: [],
+            position: tab.index,
+            isCollapsed: true,
+            title: tab.title,
+            faviconUrl: tab?.favIconUrl,
+            active: tab.active,
+        }
+        let tabNode = new Tab(tabInfo);
         stateManagementStore[tabNode.getKey()] = tabNode.updateTab(stateManagementStore[tabNode.getKey()])
 
         // update the parent tab with the child tab id
@@ -222,7 +244,7 @@ export function restoreBrowserWindow(newWindowId, retry = 0) {
         let oldTab = oldWindowStore[oldTabId]
 
         // update the newTab with the oldTab information for successful restoration
-        tab = tab.updateTabInfo({ parentTabId: oldTab.parentTabId, parentTabUrl: oldTab.parentTabUrl, childTabIds: oldTab.childTabIds, position: oldTab.position, isCollapsed: oldTab.isCollapsed });
+        tab = tab.updateTabInfo({ parentTabId: oldTab.parentTabId, childTabIds: oldTab.childTabIds, position: oldTab.position, isCollapsed: oldTab.isCollapsed });
     });
 
     // update all parentTabIds and childTabIds with newTabIds
@@ -261,7 +283,19 @@ export function addTabToStateManagementStore(windowId, tab) {
     let tabUrl = ["loading"].includes(tab.status) ? tab.pendingUrl : tab.url;
     // find opener tab from the openerTabId, as the opener tab url is not available in the tab object
     let openerTab = tab.openerTabId ? Object.values(stateManagementStore).find(t => t.id === tab.openerTabId) : null;
-    let tabNode = new Tab(tab.id, tabUrl, tab.openerTabId, openerTab?.url, [], tab.index, true, tab.title);
+    let tabInfo = {
+        id: tab.id,
+        url: tabUrl,
+        openerTabId: tab.openerTabId,
+        openerTabUrl: openerTab?.url,
+        childTabIds: [],
+        position: tab.index,
+        isCollapsed: true,
+        title: tab.title,
+        faviconUrl: tab?.favIconUrl,
+        active: tab.active,
+    }
+    let tabNode = new Tab(tabInfo);
     stateManagementStore[tabNode.getKey()] = tabNode;
 
     // increase position value by 1 for all nodes with position greater than or equal to the current tab index
@@ -313,11 +347,9 @@ export function removeTabFromStateManagementStore(windowId, tabId, withChildren 
                 // update the child tab with the new parent tab id and url
                 if (parentTab) {
                     childTab.parentTabId = tabNode.parentTabId;
-                    childTab.parentTabUrl = tabNode.parentTabUrl;
                 } else {
                     // If top most tab is removed, then the child tab will not have parentTabId
                     childTab.parentTabId = null;
-                    childTab.parentTabUrl = null;
                 }
             }
         })
