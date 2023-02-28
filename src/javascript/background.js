@@ -38,6 +38,7 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
   // Update title when tab status is complete
   if (changeInfo?.status === "complete") {
     changeInfo.title = tab.title;
+    changeInfo.favIconUrl = tab.favIconUrl;
   }
   // TODO: can we add debounce to avoid multiple updates?
   // In case of url changes - manual or using back/forward button continuously can trigger multiple updates

@@ -402,13 +402,22 @@ export function updateTabForWindow(windowId, tabId, tabInfo) {
         // update the url for the node
         tabNode.url = tabInfo.url;
         isChanged = true;
-    } else if (tabInfo?.title && tabInfo?.title !== tabNode.title) {
+    }
+    if (tabInfo?.title && tabInfo?.title !== tabNode.title) {
         // When new tabs are opened, in loading state title of the tab is missing
         // We need to update title when the tab status is completed
         // update the title for the node
         tabNode.title = tabInfo.title;
         isChanged = true;
-    } else if (String(tabInfo?.isCollapsed) && tabInfo?.isCollapsed !== tabNode.isCollapsed) {
+    }
+    if (tabInfo?.favIconUrl && tabInfo?.favIconUrl !== tabNode.faviconUrl) {
+        // When new tabs are opened, in loading state favIconUrl of the tab is missing
+        // We need to update favIconUrl when the tab status is completed
+        // update the favIconUrl for the node
+        tabNode.faviconUrl = tabInfo.favIconUrl;
+        isChanged = true;
+    }
+    if (String(tabInfo?.isCollapsed) && tabInfo?.isCollapsed !== tabNode.isCollapsed) {
         // String(true || false) will return non empty string to check presence of the value
         // update the isCollapsed for the node
         tabNode.isCollapsed = tabInfo.isCollapsed;
