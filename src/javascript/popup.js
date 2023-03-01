@@ -69,6 +69,10 @@ function createTabElement(tab, level = 0) {
   // add child tabs to the tab container recursively
   if (tab.childTabIds.length > 0 && !tab.isCollapsed) {
     tab.childTabIds.forEach((childTabId) => {
+      // for some reason the childTabId is null, so skip adding the child tab
+      if (!childTabId) return;
+      if (!sms[parseInt(childTabId)]) return;
+
       let childTab = createTabElement(sms[parseInt(childTabId)], level + 1);
       console.log("added child", childTabId, childTab);
       tC.appendChild(childTab);
