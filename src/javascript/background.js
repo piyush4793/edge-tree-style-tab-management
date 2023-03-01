@@ -32,7 +32,7 @@ chrome.tabs.onCreated.addListener((tab) => {
 
 // on tab update
 chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
-  // console.log("tab updated", tabId, changeInfo, tab);
+  console.log("tab updated", tabId, changeInfo, tab);
 
   // In loading state, title is not present for a new clicked tab
   // Update title when tab status is complete

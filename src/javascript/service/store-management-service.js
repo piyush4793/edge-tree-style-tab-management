@@ -423,6 +423,12 @@ export function updateTabForWindow(windowId, tabId, tabInfo) {
         tabNode.isCollapsed = tabInfo.isCollapsed;
         isChanged = true;
     }
+    if (String(tabInfo?.active) && tabInfo?.active !== tabNode.isActive) {
+        // String(true || false) will return non empty string to check presence of the value
+        // update the isActive for the node
+        tabNode.isActive = tabInfo.active;
+        isChanged = true;
+    }
 
     // No attribute for tabNode got changed then return
     if (!isChanged) return;

@@ -2,6 +2,10 @@
   background-color: #9EDCE0;
 }
 
+/*  give lighter shade of #9EDCE0 */
+
+
+
 #title {
   font-size: 24px;
   font-weight: bold;
@@ -24,13 +28,13 @@
   vertical-align: middle;
 }
 .tab-element:hover {
-  background-color: #e6e6e6; 
+  background-color: #cffffe; 
 }
 
 .active-tab {
   /* darker color of #9EDCE0 as bg */
-  background-color: #e6e6e6;
-  box-shadow: 0 0 5px #e6e6e6;
+  background-color: #cffffe;
+  box-shadow: 0 0 5px #cffffe;
 }
 
 .tab-title {
@@ -67,10 +71,6 @@
 .no-child {
   padding-left: 16px;
   padding-right: 16px;
-}
-
-.space {
-  margin-left: 8px;
 }
 
 /* not first child of .tab-container gets 16px padding left */

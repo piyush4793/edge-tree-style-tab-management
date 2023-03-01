@@ -51,6 +51,8 @@ function createTabElement(tab, level = 0) {
   //    - tabElement (tE)
   //      - expand collapse buttom
   //      - tab title text
+  //          - favicon
+  //          - title text element
   //      - close button
   //    - tC (child tab if exists)
 
@@ -79,7 +81,9 @@ function createTabElement(tab, level = 0) {
 function createTabElementStructure(tab, level) {
   let tabElement = document.createElement("div");
   tabElement.classList.add("tab-element");
+
   if (tab.active) tabElement.classList.add("active-tab");
+  else tabElement.classList.remove("active-tab");
 
   if (tab.childTabIds.length > 0) {
     let expandCollapseButton = document.createElement("button");
@@ -250,7 +254,19 @@ function onclickTabTitle(event) {
   // open the tab here
   try {
     let tab = sms[parseInt(event.target?.parentNode?.parentNode?.parentNode.id)];
+    let oldTab = sms[parseInt(document.getElementsByClassName("active-tab")[0].parentNode?.id)];
+    
+    // let oldActiveTab = document.getElementsByClassName("active-tab")[0];
+    // if (oldActiveTab) oldActiveTab.classList.remove("active-tab");
+    
+    // let newActiveTab = event.target?.parentNode?.parentNode
+    // newActiveTab.classList.add("active-tab");
+    
+    console.log("oldtab", oldTab.id, "newTab", tab.id);
+
+    chrome.tabs.update(oldTab.id, { active: false });
     chrome.tabs.update(tab.id, { active: true });
+
   } catch (e) {
     console.log("tab opening failed", e);
   }
