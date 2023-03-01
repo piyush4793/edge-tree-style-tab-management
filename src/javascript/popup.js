@@ -57,7 +57,7 @@ function createTabElement(tab, level = 0) {
   //    - tC (child tab if exists)
 
   // if the tab is already added to the dom, skip creation
-  if (document.getElementById(`${tab.id}`)) return;
+  if (document.getElementById(`${tab?.id}`)) return;
 
   let tC = document.createElement("div");
   tC.classList.add("tab-container");
@@ -156,6 +156,7 @@ function expandCollapseTree(tab, collapse) {
     if (tab.childTabIds.length > 0) {
       tab.childTabIds.forEach((childTabId) => {
         let cTC = document.getElementById(`${childTabId}`);
+        if(!cTC) return;
         cTC.remove();
       });
     }
